@@ -127,9 +127,15 @@ func main() {
 	http.Handle("/subscribe", gz.GzipHandler(logReq(SubscribeHandler)))
 	http.Handle("/verify", gz.GzipHandler(logReq(VerifyHandler)))
 
-	// CSS
+	// Static files
+	http.Handle("/js/main.min.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join("js", "main.min.js"))
+	})))
 	http.Handle("/css/shared.css", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join("css", "shared.css"))
+	})))
+	http.Handle("/image/github.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join("image", "github.png"))
 	})))
 
 	// Set up the web server
