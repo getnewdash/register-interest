@@ -12,6 +12,7 @@ import (
 
 	gz "github.com/NYTimes/gziphandler"
 	"github.com/jackc/pgx"
+	"gopkg.in/go-playground/validator.v8"
 )
 
 var (
@@ -21,6 +22,7 @@ var (
 
 	// HTTPS certificate paths
 	certPath, certKey string
+	httpsEnabled      bool
 
 	// The request log
 	requestLog string
@@ -34,12 +36,15 @@ var (
 
 	// Our parsed HTML templates
 	tmpl *template.Template
+
+	// Used for validating email addresses
+	validate *validator.Validate
 )
 
 func main() {
 	// Load the required values from environment variables (easy for working with Jenkins)
 	var err error
-	var httpsEnabled, ok bool
+	var ok bool
 
 	// HTTPS Certificate pieces
 	certPath, ok = os.LookupEnv("HTTPS_CERT_PATH")
@@ -100,6 +105,10 @@ func main() {
 	}
 	defer reqLog.Close()
 	log.Printf("Request log opened: %s\n", requestLog)
+
+	// Set up validation
+	config := &validator.Config{TagName: "validate"} // TODO: What does the 'TagName: validate' as shown in all the examples actually do?
+	validate = validator.New(config)
 
 	// Register page handlers
 	http.Handle("/", gz.GzipHandler(logReq(MainHandler)))

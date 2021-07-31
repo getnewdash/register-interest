@@ -15,7 +15,7 @@ func ConnectPostgreSQL() (err error) {
 	pgConfig := new(pgx.ConnConfig)
 	pgConfig.Host = "localhost"
 	pgConfig.Database = "newdash_interest"
-	pgConfig.User = "jc"
+	pgConfig.User = "newdash"
 
 	pgPoolConfig := pgx.ConnPoolConfig{*pgConfig, 20, nil, 2 * time.Second}
 	pg, err = pgx.NewConnPool(pgPoolConfig)
