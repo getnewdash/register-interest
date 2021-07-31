@@ -1,0 +1,21 @@
+{{ define "mainPage" }}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Newdash.io</title>
+    <link href="/css/shared.css" rel="stylesheet">
+</head>
+<body>
+    <h1><a class="basic" href="/">Newdash.io</a> - The new home for your Redash hosting</h1>
+    <h2>Launching in the coming weeks</h2>
+    <form action="/subscribe" method="post">
+        <p>Register your interest (email address): <label>
+            <input name="email" type="email"/>
+        </label> <input type="submit" value="Subscribe"></p>
+        <p style="font-style: italic; text-decoration: underline;">We won't use your email for any purpose other than important progress and launch details</p>
+    </form>
+    <div>In the meantime, if you want to install the latest Redash beta locally on your Ubuntu 20.04 LTS</div>
+    <div>system, use the updated setup.sh script here: <a href="https://github.com/getnewdash/setup">https://github.com/getnewdash/setup</a></div>
+</body>
+</html>
+{{ end }}

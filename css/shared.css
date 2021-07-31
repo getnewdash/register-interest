@@ -1,0 +1,10 @@
+body {
+    width: 60em;
+    margin: 0 auto;
+    font-family: Tahoma, Verdana, Arial, sans-serif;
+    text-align: center;
+}
+.basic {
+    color: black;
+    text-decoration: none;
+}
