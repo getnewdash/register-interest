@@ -44,10 +44,12 @@ func SubscribeHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Looking for existing verified email failed: %v\n", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	if foundEmail != 0 {
 		log.Printf("Potential customer '%v' just submitted their email, but it's already verified\n", emailAddr)
 		http.Error(w, "That email address has already been submitted and verified", http.StatusBadRequest)
+		return
 	}
 
 	// Generate new random token
@@ -76,15 +78,19 @@ func SubscribeHandler(w http.ResponseWriter, r *http.Request) {
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows (%v) affected while storing potential customer email '%v'\n", numRows, emailAddr)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Create the URL the user needs to click on
-	var verifyURL string
-	if httpsEnabled {
-		verifyURL = fmt.Sprintf("https://%v:%v/verify?token=%v", hostName, port, encodedToken)
-	} else {
-		verifyURL = fmt.Sprintf("http://%v:%v/verify?token=%v", hostName, port, encodedToken)
+	var portString, verifyURL string
+	if port != 443 {
+		portString = fmt.Sprintf(":%v", port)
 	}
+	protocol := "https"
+	if !httpsEnabled {
+		protocol = "http"
+	}
+	verifyURL = fmt.Sprintf("%v://%v%v/verify?token=%v", protocol, hostName, portString, encodedToken)
 
 	// Send the verification email
 	from := mail.NewEmail("Newdash.io", "interest@newdash.io")
@@ -98,6 +104,7 @@ func SubscribeHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	log.Printf("Verification email sent to '%v'\n", emailAddr)
 
@@ -107,6 +114,7 @@ func SubscribeHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Error: %s", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -116,11 +124,13 @@ func VerifyHandler(w http.ResponseWriter, r *http.Request) {
 	v := r.FormValue("token")
 	if v == "" {
 		http.Error(w, "No verification token provided", http.StatusBadRequest)
+		return
 	}
 	verifyToken, err := base64.URLEncoding.DecodeString(v)
 	if err != nil {
 		log.Printf("Error: %s", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	// Validate the token
@@ -128,6 +138,7 @@ func VerifyHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Error: %s", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	// Make sure the token is found in the database
@@ -140,10 +151,12 @@ func VerifyHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Looking for existing token '%v' failed: %v\n", verifyToken, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	if foundToken == 0 {
 		log.Printf("A token '%v' has been submitted, but it's not present in the database\n", foundToken)
 		http.Error(w, "That token value isn't known to us.  Broken email link?", http.StatusBadRequest)
+		return
 	}
 
 	// Update the token status in the database
@@ -160,6 +173,7 @@ func VerifyHandler(w http.ResponseWriter, r *http.Request) {
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows (%v) affected updating token '%v' status\n", numRows, verifyToken)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Render the page
@@ -168,5 +182,6 @@ func VerifyHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Error: %s", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }

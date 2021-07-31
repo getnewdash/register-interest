@@ -13,7 +13,7 @@ import (
 func ConnectPostgreSQL() (err error) {
 	// PostgreSQL configuration info
 	pgConfig := new(pgx.ConnConfig)
-	pgConfig.Host = "localhost"
+	pgConfig.Host = "/var/run/postgresql"
 	pgConfig.Database = "newdash_interest"
 	pgConfig.User = "newdash"
 

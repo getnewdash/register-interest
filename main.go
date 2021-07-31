@@ -67,10 +67,22 @@ func main() {
 	}
 	p, ok := os.LookupEnv("PORT")
 	if !ok {
-		log.Fatal("PORT not set")
+		log.Println("PORT not set, using default")
+		if httpsEnabled {
+			p = "443"
+		} else {
+			// Non HTTPS default is 8080, as we're assuming local development setup
+			p = "8080"
+		}
 	}
 	if p == "" {
-		log.Fatal("PORT is empty")
+		log.Println("PORT is empty, using default")
+		if httpsEnabled {
+			p = "443"
+		} else {
+			// Non HTTPS default is 8080, as we're assuming local development setup
+			p = "8080"
+		}
 	}
 	port, err = strconv.Atoi(p)
 	if err != nil {
