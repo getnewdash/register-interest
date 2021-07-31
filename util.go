@@ -2,9 +2,32 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"time"
+
+	"github.com/jackc/pgx"
 )
+
+// ConnectPostgreSQL creates a connection pool to the PostgreSQL server
+func ConnectPostgreSQL() (err error) {
+	// PostgreSQL configuration info
+	pgConfig := new(pgx.ConnConfig)
+	pgConfig.Host = "localhost"
+	pgConfig.Database = "newdash_interest"
+	pgConfig.User = "jc"
+
+	pgPoolConfig := pgx.ConnPoolConfig{*pgConfig, 20, nil, 2 * time.Second}
+	pg, err = pgx.NewConnPool(pgPoolConfig)
+	if err != nil {
+		return fmt.Errorf("Couldn't connect to PostgreSQL server: %v\n", err)
+	}
+
+	// Log successful connection
+	log.Printf("Connected to PostgreSQL server: %v:%v\n", "localhost", 5432)
+
+	return nil
+}
 
 // Wrapper function to log incoming https requests.
 func logReq(fn http.HandlerFunc) http.HandlerFunc {
