@@ -28,7 +28,8 @@ CREATE TABLE public.potential_customers (
     id bigint NOT NULL,
     email text NOT NULL,
     token text NOT NULL,
-    token_verified boolean DEFAULT false
+    token_verified boolean DEFAULT false,
+    registration_date timestamp with time zone DEFAULT now()
 );
 
 
