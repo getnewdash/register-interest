@@ -184,4 +184,40 @@ func VerifyHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Retrieve the email address corresponding to the token
+	var email string
+	dbQuery = `
+		SELECT email
+		FROM potential_customers
+		WHERE token = $1`
+	err = pg.QueryRow(dbQuery, verifyToken).Scan(&email)
+	if err != nil {
+		msg := fmt.Sprintf("Retrieving email address for token '%v' failed: %v\n", verifyToken, err)
+		log.Printf(msg)
+		emailAlert("Error when verifying token for Newdash interest", msg)
+		return
+	}
+	if email == "" {
+		msg := fmt.Sprintf("A token '%v' was verified, but its email address wasn't able to be retrieved\n", foundToken)
+		emailAlert("Error when verifying token for Newdash interest", msg)
+		return
+	}
+
+	// Send an email alerting me to the newly registered interest
+	content := fmt.Sprintf("Someone has registered their interest in Newdash hosting: %v", email)
+	emailAlert("New verified interest in Newdash hosting", content)
+}
+
+func emailAlert(subject, content string) {
+	from := mail.NewEmail("Newdash.io", "interest@newdash.io")
+	to := mail.NewEmail("", alertEmail)
+	message := mail.NewSingleEmail(from, subject, to, content, content)
+	client := sendgrid.NewSendClient(sendGridKey)
+	_, err := client.Send(message)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println(fmt.Sprintf("Alert email sent to '%v'", alertEmail))
 }

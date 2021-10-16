@@ -16,6 +16,9 @@ import (
 )
 
 var (
+	// Email address to send alerts to. eg for new sign ups, any errors, etc.
+	alertEmail string
+
 	// Host name and port to listen on
 	hostName string
 	port     int
@@ -93,6 +96,12 @@ func main() {
 	requestLog, ok = os.LookupEnv("REQUEST_LOG")
 	if !ok {
 		log.Fatal("REQUEST_LOG not set")
+	}
+
+	// Email address to send alerts too
+	alertEmail, ok = os.LookupEnv("ALERT_EMAIL")
+	if !ok {
+		log.Fatal("ALERT_EMAIL not set")
 	}
 
 	// Sendgrid API
