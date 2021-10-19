@@ -92,6 +92,11 @@ func SubscribeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	verifyURL = fmt.Sprintf("%v://%v%v/verify?token=%v", protocol, hostName, portString, encodedToken)
 
+	// Debugging output
+	if debug {
+		log.Printf(verifyURL)
+	}
+
 	// Send the verification email
 	from := mail.NewEmail("Newdash.io", "interest@newdash.io")
 	subject := "Please verify your email address"

@@ -19,6 +19,10 @@ var (
 	// Email address to send alerts to. eg for new sign ups, any errors, etc.
 	alertEmail string
 
+	// Output extra debugging information?
+	// To enable, define "DEBUG" in the environment with any value that's not an empty string
+	debug bool
+
 	// Host name and port to listen on
 	hostName string
 	port     int
@@ -108,6 +112,13 @@ func main() {
 	sendGridKey, ok = os.LookupEnv("SENDGRID_API_KEY")
 	if !ok {
 		log.Fatal("SENDGRID_API_KEY not set")
+	}
+
+	// Switch on debug mode?
+	z, _ := os.LookupEnv("DEBUG")
+	if z != "" {
+		debug = true
+		log.Println("Enabling debug logging")
 	}
 
 	// Connect to PostgreSQL server
