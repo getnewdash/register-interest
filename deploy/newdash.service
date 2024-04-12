@@ -7,7 +7,8 @@ After=postgresql.service
 AssertFileIsExecutable=/usr/local/bin/register-interest
 
 [Service]
-Environment="SENDGRID_API_KEY=redacted"
+Environment="ALERT_EMAIL=example@example.com"
+Environment="SMTP2GO_API_KEY=redacted"
 Environment="HTTPS_CERT_PATH=/etc/letsencrypt/live/newdash.io/fullchain.pem"
 Environment="HTTPS_CERT_KEY=/etc/letsencrypt/live/newdash.io/privkey.pem"
 Environment="HOSTNAME=newdash.io"

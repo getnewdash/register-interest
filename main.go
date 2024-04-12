@@ -38,9 +38,6 @@ var (
 	// PostgreSQL connection pool handle
 	pg *pgx.ConnPool
 
-	// The Sendgrid API key
-	sendGridKey string
-
 	// Our parsed HTML templates
 	tmpl *template.Template
 
@@ -49,7 +46,7 @@ var (
 )
 
 func main() {
-	// Load the required values from environment variables (easy for working with Jenkins)
+	// Load the required values from environment variables (easy for working with CI systems)
 	var err error
 	var ok bool
 
@@ -108,10 +105,10 @@ func main() {
 		log.Fatal("ALERT_EMAIL not set")
 	}
 
-	// Sendgrid API
-	sendGridKey, ok = os.LookupEnv("SENDGRID_API_KEY")
+	// SMTP2Go API key
+	_, ok = os.LookupEnv("SMTP2GO_API_KEY")
 	if !ok {
-		log.Fatal("SENDGRID_API_KEY not set")
+		log.Fatal("SMTP2GO_API_KEY not set")
 	}
 
 	// Switch on debug mode?
@@ -133,10 +130,10 @@ func main() {
 	// Open the request log for writing
 	reqLog, err = os.OpenFile(requestLog, os.O_CREATE|os.O_APPEND|os.O_WRONLY|os.O_SYNC, 0750)
 	if err != nil {
-		log.Fatalf("Error when opening request log: %s\n", err)
+		log.Fatalf("Error when opening request log: %s", err)
 	}
 	defer reqLog.Close()
-	log.Printf("Request log opened: %s\n", requestLog)
+	log.Printf("Request log opened: %s", requestLog)
 
 	// Set up validation
 	config := &validator.Config{TagName: "validate"} // TODO: What does the 'TagName: validate' as shown in all the examples actually do?
@@ -169,7 +166,7 @@ func main() {
 	}
 
 	// Start web server
-	log.Printf("WebUI server starting on https://%s:%v\n", "localhost", port)
+	log.Printf("WebUI server starting on https://%s:%v", "localhost", port)
 	if httpsEnabled {
 		err = srv.ListenAndServeTLS(certPath, certKey)
 	} else {

@@ -20,11 +20,11 @@ func ConnectPostgreSQL() (err error) {
 	pgPoolConfig := pgx.ConnPoolConfig{*pgConfig, 20, nil, 2 * time.Second}
 	pg, err = pgx.NewConnPool(pgPoolConfig)
 	if err != nil {
-		return fmt.Errorf("Couldn't connect to PostgreSQL server: %v\n", err)
+		return fmt.Errorf("Couldn't connect to PostgreSQL server: %v", err)
 	}
 
 	// Log successful connection
-	log.Printf("Connected to PostgreSQL server: %v:%v\n", "localhost", 5432)
+	log.Printf("Connected to PostgreSQL server: %v:%v", "localhost", 5432)
 
 	return nil
 }

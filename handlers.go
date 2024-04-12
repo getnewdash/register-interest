@@ -7,8 +7,7 @@ import (
 	"net/http"
 
 	"github.com/segmentio/ksuid"
-	"github.com/sendgrid/sendgrid-go"
-	"github.com/sendgrid/sendgrid-go/helpers/mail"
+	"github.com/smtp2go-oss/smtp2go-go"
 )
 
 // MainHandler displays the landing page
@@ -42,12 +41,12 @@ func SubscribeHandler(w http.ResponseWriter, r *http.Request) {
 			AND token_verified = true`
 	err := pg.QueryRow(dbQuery, emailAddr).Scan(&foundEmail)
 	if err != nil {
-		log.Printf("Looking for existing verified email failed: %v\n", err)
+		log.Printf("Looking for existing verified email failed: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if foundEmail != 0 {
-		log.Printf("Potential customer '%v' just submitted their email, but it's already verified\n", emailAddr)
+		log.Printf("Potential customer '%v' just submitted their email, but it's already verified", emailAddr)
 		http.Error(w, "That email address has already been submitted and verified", http.StatusBadRequest)
 		return
 	}
@@ -71,12 +70,12 @@ func SubscribeHandler(w http.ResponseWriter, r *http.Request) {
 				SET token = $2`
 	commandTag, err := pg.Exec(dbQuery, emailAddr, verifyToken)
 	if err != nil {
-		log.Printf("Storing potential customer email failed: %v\n", err)
+		log.Printf("Storing potential customer email failed: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows (%v) affected while storing potential customer email '%v'\n", numRows, emailAddr)
+		log.Printf("Wrong number of rows (%v) affected while storing potential customer email '%v'", numRows, emailAddr)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -98,20 +97,25 @@ func SubscribeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Send the verification email
-	from := mail.NewEmail("Newdash.io", "interest@newdash.io")
-	subject := "Please verify your email address"
-	to := mail.NewEmail("", emailAddr)
-	plainTextContent := fmt.Sprintf("Please visit this url to confirm your email address: %v", verifyURL)
-	htmlContent := fmt.Sprintf(`Please visit this url to verify your email address: <a href="%v">%v</a>`, verifyURL, verifyURL)
-	message := mail.NewSingleEmail(from, subject, to, plainTextContent, htmlContent)
-	client := sendgrid.NewSendClient(sendGridKey)
-	_, err = client.Send(message)
+	email := smtp2go.Email{
+		From:     "Newdash <reply@newdash.io>",
+		To:       []string{fmt.Sprintf("<%s>", emailAddr)},
+		Subject:  "Please verify your email address",
+		TextBody: fmt.Sprintf("Please visit this url to confirm your email address: %v", verifyURL),
+		HtmlBody: fmt.Sprintf(`Please visit this url to verify your email address: <a href="%v">%v</a>`, verifyURL, verifyURL),
+	}
+	res, err := smtp2go.Send(&email)
 	if err != nil {
-		log.Println(err)
+		log.Printf("Error when sending verification email to: '%v', %v", emailAddr, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	log.Printf("Verification email sent to '%v'\n", emailAddr)
+	if res.Data.Error != "" {
+		log.Printf("Error when sending verification email to: '%v', %v", emailAddr, res.Data.Error)
+		http.Error(w, res.Data.Error, http.StatusInternalServerError)
+		return
+	}
+	log.Printf("Verification email sent to '%v'", emailAddr)
 
 	// Render the page
 	t := tmpl.Lookup("subscribePage")
@@ -154,12 +158,12 @@ func VerifyHandler(w http.ResponseWriter, r *http.Request) {
 		WHERE token = $1`
 	err = pg.QueryRow(dbQuery, verifyToken).Scan(&foundToken)
 	if err != nil {
-		log.Printf("Looking for existing token '%v' failed: %v\n", verifyToken, err)
+		log.Printf("Looking for existing token '%v' failed: %v", verifyToken, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if foundToken == 0 {
-		log.Printf("A token '%v' has been submitted, but it's not present in the database\n", foundToken)
+		log.Printf("A token '%s' has been submitted, but it's not present in the database", verifyToken)
 		http.Error(w, "That token value isn't known to us.  Broken email link?", http.StatusBadRequest)
 		return
 	}
@@ -171,12 +175,12 @@ func VerifyHandler(w http.ResponseWriter, r *http.Request) {
 		WHERE token = $1`
 	commandTag, err := pg.Exec(dbQuery, verifyToken)
 	if err != nil {
-		log.Printf("Updating token status failed: %v\n", err)
+		log.Printf("Updating token status failed: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows (%v) affected updating token '%v' status\n", numRows, verifyToken)
+		log.Printf("Wrong number of rows (%v) affected updating token '%s' status", numRows, verifyToken)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -198,13 +202,13 @@ func VerifyHandler(w http.ResponseWriter, r *http.Request) {
 		WHERE token = $1`
 	err = pg.QueryRow(dbQuery, verifyToken).Scan(&email)
 	if err != nil {
-		msg := fmt.Sprintf("Retrieving email address for token '%v' failed: %v\n", verifyToken, err)
+		msg := fmt.Sprintf("Retrieving email address for token '%v' failed: %v", verifyToken, err)
 		log.Printf(msg)
 		emailAlert("Error when verifying token for Newdash interest", msg)
 		return
 	}
 	if email == "" {
-		msg := fmt.Sprintf("A token '%v' was verified, but its email address wasn't able to be retrieved\n", foundToken)
+		msg := fmt.Sprintf("A token '%v' was verified, but its email address wasn't able to be retrieved", foundToken)
 		emailAlert("Error when verifying token for Newdash interest", msg)
 		return
 	}
@@ -215,14 +219,21 @@ func VerifyHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func emailAlert(subject, content string) {
-	from := mail.NewEmail("Newdash.io", "interest@newdash.io")
-	to := mail.NewEmail("", alertEmail)
-	message := mail.NewSingleEmail(from, subject, to, content, content)
-	client := sendgrid.NewSendClient(sendGridKey)
-	_, err := client.Send(message)
+	email := smtp2go.Email{
+		From:     "Newdash <reply@newdash.io>",
+		To:       []string{fmt.Sprintf("<%s>", alertEmail)},
+		Subject:  subject,
+		TextBody: content,
+		HtmlBody: content,
+	}
+	res, err := smtp2go.Send(&email)
 	if err != nil {
-		log.Println(err)
+		log.Printf("Error when sending email alert: %v", err)
 		return
 	}
-	log.Println(fmt.Sprintf("Alert email sent to '%v'", alertEmail))
+	if res.Data.Error != "" {
+		log.Printf("Error when sending email alert: %v", res.Data.Error)
+		return
+	}
+	log.Printf("Alert email sent to '%v'", alertEmail)
 }
