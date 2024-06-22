@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"html/template"
@@ -11,7 +12,7 @@ import (
 	"strconv"
 
 	gz "github.com/NYTimes/gziphandler"
-	"github.com/jackc/pgx"
+	"github.com/jackc/pgx/v5"
 	"gopkg.in/go-playground/validator.v8"
 )
 
@@ -35,8 +36,8 @@ var (
 	requestLog string
 	reqLog     *os.File
 
-	// PostgreSQL connection pool handle
-	pg *pgx.ConnPool
+	// PostgreSQL connection handle
+	pg *pgx.Conn
 
 	// Our parsed HTML templates
 	tmpl *template.Template
@@ -177,5 +178,5 @@ func main() {
 	}
 
 	// Disconnect from PostgreSQL
-	pg.Close()
+	pg.Close(context.Background())
 }

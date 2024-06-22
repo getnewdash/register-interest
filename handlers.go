@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"log"
@@ -39,7 +40,7 @@ func SubscribeHandler(w http.ResponseWriter, r *http.Request) {
 		FROM potential_customers
 		WHERE email = $1
 			AND token_verified = true`
-	err := pg.QueryRow(dbQuery, emailAddr).Scan(&foundEmail)
+	err := pg.QueryRow(context.Background(), dbQuery, emailAddr).Scan(&foundEmail)
 	if err != nil {
 		log.Printf("Looking for existing verified email failed: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -68,7 +69,7 @@ func SubscribeHandler(w http.ResponseWriter, r *http.Request) {
 		ON CONFLICT (email)
 			DO UPDATE
 				SET token = $2`
-	commandTag, err := pg.Exec(dbQuery, emailAddr, verifyToken)
+	commandTag, err := pg.Exec(context.Background(), dbQuery, emailAddr, verifyToken)
 	if err != nil {
 		log.Printf("Storing potential customer email failed: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -156,7 +157,7 @@ func VerifyHandler(w http.ResponseWriter, r *http.Request) {
 		SELECT count(token)
 		FROM potential_customers
 		WHERE token = $1`
-	err = pg.QueryRow(dbQuery, verifyToken).Scan(&foundToken)
+	err = pg.QueryRow(context.Background(), dbQuery, verifyToken).Scan(&foundToken)
 	if err != nil {
 		log.Printf("Looking for existing token '%v' failed: %v", verifyToken, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -173,7 +174,7 @@ func VerifyHandler(w http.ResponseWriter, r *http.Request) {
 		UPDATE potential_customers
 		SET token_verified = true
 		WHERE token = $1`
-	commandTag, err := pg.Exec(dbQuery, verifyToken)
+	commandTag, err := pg.Exec(context.Background(), dbQuery, verifyToken)
 	if err != nil {
 		log.Printf("Updating token status failed: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -200,7 +201,7 @@ func VerifyHandler(w http.ResponseWriter, r *http.Request) {
 		SELECT email
 		FROM potential_customers
 		WHERE token = $1`
-	err = pg.QueryRow(dbQuery, verifyToken).Scan(&email)
+	err = pg.QueryRow(context.Background(), dbQuery, verifyToken).Scan(&email)
 	if err != nil {
 		msg := fmt.Sprintf("Retrieving email address for token '%v' failed: %v", verifyToken, err)
 		log.Printf(msg)

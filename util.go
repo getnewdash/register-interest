@@ -1,26 +1,27 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
-	"github.com/jackc/pgx"
+	"github.com/jackc/pgx/v5"
 )
 
-// ConnectPostgreSQL creates a connection pool to the PostgreSQL server
+// ConnectPostgreSQL creates a connection to the PostgreSQL server
 func ConnectPostgreSQL() (err error) {
 	// PostgreSQL configuration info
-	pgConfig := new(pgx.ConnConfig)
-	pgConfig.Host = "/var/run/postgresql"
-	pgConfig.Database = "newdash_interest"
-	pgConfig.User = "newdash"
-
-	pgPoolConfig := pgx.ConnPoolConfig{*pgConfig, 20, nil, 2 * time.Second}
-	pg, err = pgx.NewConnPool(pgPoolConfig)
+	os.Setenv("PGHOST", "/var/run/postgresql")
+	os.Setenv("PGDATABASE", "newdash_interest")
+	os.Setenv("PGUSER", "newdash")
+	os.Setenv("PGPASSFILE", "/home/newdash/.pgpass")
+	pg, err = pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
-		return fmt.Errorf("Couldn't connect to PostgreSQL server: %v", err)
+		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
+		return
 	}
 
 	// Log successful connection
