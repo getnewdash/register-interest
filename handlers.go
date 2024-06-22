@@ -83,7 +83,7 @@ func SubscribeHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Create the URL the user needs to click on
 	var portString, verifyURL string
-	if port != 443 {
+	if (port != 443) && (port != 8443) {
 		portString = fmt.Sprintf(":%v", port)
 	}
 	protocol := "https"
