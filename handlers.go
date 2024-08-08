@@ -196,26 +196,47 @@ func VerifyHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the email address corresponding to the token
-	var email string
+	var emailAddress string
 	dbQuery = `
 		SELECT email
 		FROM potential_customers
 		WHERE token = $1`
-	err = pg.QueryRow(context.Background(), dbQuery, verifyToken).Scan(&email)
+	err = pg.QueryRow(context.Background(), dbQuery, verifyToken).Scan(&emailAddress)
 	if err != nil {
 		msg := fmt.Sprintf("Retrieving email address for token '%v' failed: %v", verifyToken, err)
 		log.Printf(msg)
 		emailAlert("Error when verifying token for Newdash interest", msg)
 		return
 	}
-	if email == "" {
+	if emailAddress == "" {
 		msg := fmt.Sprintf("A token '%v' was verified, but its email address wasn't able to be retrieved", foundToken)
 		emailAlert("Error when verifying token for Newdash interest", msg)
 		return
 	}
 
-	// Send an email alerting me to the newly registered interest
-	content := fmt.Sprintf("Someone has registered their interest in Newdash hosting: %v", email)
+	// Send an email to the user, letting them know their registration has been confirmed
+	confirmEmail := smtp2go.Email{
+		From:     "Newdash <reply@newdash.io>",
+		To:       []string{fmt.Sprintf("<%s>", emailAddress)},
+		Subject:  "Thank you for confirming your interest in Redash Hosting",
+		TextBody: fmt.Sprintf("Thank you for confirming your interest in our Redash Hosting.  We'll contact you regarding it in the next few days."),
+		HtmlBody: fmt.Sprintf("Thank you for confirming your interest in our Redash Hosting.  We'll contact you regarding it in the next few days."),
+	}
+	res, err := smtp2go.Send(&confirmEmail)
+	if err != nil {
+		log.Printf("Error when sending registration confirmation email to: '%v', %v", emailAddress, err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if res.Data.Error != "" {
+		log.Printf("Error when sending registration confirmation email to: '%v', %v", emailAddress, res.Data.Error)
+		http.Error(w, res.Data.Error, http.StatusInternalServerError)
+		return
+	}
+	log.Printf("Registration confirmation email sent to '%v'", emailAddress)
+
+	// Send an email alerting us to the newly registered interest
+	content := fmt.Sprintf("Someone has registered their interest in Newdash hosting: %v", emailAddress)
 	emailAlert("New verified interest in Newdash hosting", content)
 }
 
