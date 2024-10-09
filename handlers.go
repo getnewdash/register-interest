@@ -90,7 +90,7 @@ func SubscribeHandler(w http.ResponseWriter, r *http.Request) {
 	if !httpsEnabled {
 		protocol = "http"
 	}
-	verifyURL = fmt.Sprintf("%v://%v%v/verify?token=%v", protocol, hostName, portString, encodedToken)
+	verifyURL = fmt.Sprintf("%v://%v%v/ver?token=%v", protocol, hostName, portString, encodedToken)
 
 	// Debugging output
 	if debug {

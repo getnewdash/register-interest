@@ -142,7 +142,8 @@ func main() {
 
 	// Register page handlers
 	http.Handle("/", gz.GzipHandler(logReq(MainHandler)))
-	http.Handle("/subscribe", gz.GzipHandler(logReq(SubscribeHandler)))
+	http.Handle("/sub", gz.GzipHandler(logReq(SubscribeHandler)))
+	http.Handle("/ver", gz.GzipHandler(logReq(VerifyHandler)))
 	http.Handle("/verify", gz.GzipHandler(logReq(VerifyHandler)))
 
 	// Static files
