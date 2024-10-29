@@ -1,11 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/segmentio/ksuid"
 	"github.com/smtp2go-oss/smtp2go-go"
@@ -13,9 +17,17 @@ import (
 
 // MainHandler displays the landing page
 func MainHandler(w http.ResponseWriter, r *http.Request) {
+	pageData := struct {
+		TurnstileEnabled bool
+		TurnstileSiteKey string
+	}{
+		TurnstileEnabled,
+		TurnstileSiteKey,
+	}
+
 	// Render the page
 	t := tmpl.Lookup("mainPage")
-	err := t.Execute(w, nil)
+	err := t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -24,6 +36,92 @@ func MainHandler(w http.ResponseWriter, r *http.Request) {
 
 // SubscribeHandler displays the page when an email address has been provided
 func SubscribeHandler(w http.ResponseWriter, r *http.Request) {
+	// Was a valid Cloudflare Turnstile response provided
+	turnstileTokenSuccess := false
+	if TurnstileEnabled {
+		turnstileToken := r.PostFormValue("cf-turnstile-response")
+		if turnstileToken == "" {
+			http.Error(w, "Missing Cloudflare Turnstile token", http.StatusForbidden)
+			return
+		}
+
+		if debug {
+			log.Printf("Cloudflare Token provided: %v", turnstileToken)
+		}
+
+		// JSON encode the Turnstile token, for checking by the backend
+		x := struct {
+			TurnstileToken     string `json:"response"`
+			TurnstileSecretKey string `json:"secret"`
+		}{
+			turnstileToken,
+			TurnstileSecretKey,
+		}
+		jsonBody, err := json.MarshalIndent(x, "", " ")
+		if err != nil {
+			log.Println(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Validate the provided Cloudflare Turnstile token using the siteverity end point
+		resp, err := http.Post("https://challenges.cloudflare.com/turnstile/v0/siteverify", "application/json", bytes.NewBuffer(jsonBody))
+		if err != nil {
+			log.Println(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer resp.Body.Close()
+
+		// Turnstile response structure as per: https://developers.cloudflare.com/turnstile/get-started/server-side-validation/
+		type TurnstileResponse struct {
+			Success            bool      `json:"success"`
+			ChallengeTimestamp time.Time `json:"challenge_ts"`
+			Hostname           string    `json:"hostname"`
+			ErrorCodes         []string  `json:"error-codes"`
+			Action             string    `json:"action"`
+			CustomerData       string    `json:"cdata"`
+		}
+
+		// Convert the JSON into something usable
+		raw, err := io.ReadAll(resp.Body)
+		if err != nil {
+			log.Println(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		var tsResp TurnstileResponse
+		if err = json.Unmarshal(raw, &tsResp); err != nil {
+			log.Println(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if debug {
+			log.Println("**************************")
+			log.Println("Turnstile response failure")
+			log.Println("**************************")
+			log.Printf("Turnstile response status code: %s", resp.Status)
+			log.Printf("Turnstile response Success : '%v'", tsResp.Success)
+			log.Printf("Turnstile response Challenge Timestamp : '%v'", tsResp.ChallengeTimestamp)
+			log.Printf("Turnstile response Hostname : '%v'", tsResp.Hostname)
+			log.Printf("Turnstile response Errorcode : '%v'", tsResp.ErrorCodes)
+			log.Printf("Turnstile response Action : '%v'", tsResp.Action)
+			log.Printf("Turnstile response CustomerData : '%v'", tsResp.CustomerData)
+			log.Println("**************************")
+			log.Println("")
+		}
+
+		// Mark the submission as valid if Turnstile succeeded
+		if tsResp.Success {
+			turnstileTokenSuccess = true
+		} else {
+			// Turnstile validation failed
+			http.Error(w, "Cloudflare Turnstile doesn't think you're a real user.  Please go back and try again.", http.StatusForbidden)
+			return
+		}
+	}
+
 	// Extract and validate the email address provided by the user
 	emailAddr := r.PostFormValue("email")
 	errs := validate.Field(emailAddr, "required,email")
@@ -64,12 +162,12 @@ func SubscribeHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Store the provided email address and token in the database
 	dbQuery = `
-		INSERT INTO potential_customers (email, token)
-		VALUES ($1, $2)
+		INSERT INTO potential_customers (email, token, passed_turnstile_check)
+		VALUES ($1, $2, $3)
 		ON CONFLICT (email)
 			DO UPDATE
-				SET token = $2`
-	commandTag, err := pg.Exec(context.Background(), dbQuery, emailAddr, verifyToken)
+				SET token = $2, passed_turnstile_check = $3`
+	commandTag, err := pg.Exec(context.Background(), dbQuery, emailAddr, verifyToken, turnstileTokenSuccess)
 	if err != nil {
 		log.Printf("Storing potential customer email failed: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

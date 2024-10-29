@@ -32,6 +32,11 @@ var (
 	certPath, certKey string
 	httpsEnabled      bool
 
+	// Cloudflare Turnstile
+	TurnstileEnabled   bool
+	TurnstileSiteKey   string
+	TurnstileSecretKey string
+
 	// The request log
 	requestLog string
 	reqLog     *os.File
@@ -93,6 +98,33 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Load Cloudflare Turnstile keys
+	TurnstileEnabled = true
+	TurnstileSiteKey, ok = os.LookupEnv("TURNSTILE_SITE_KEY")
+	if !ok {
+		TurnstileEnabled = false
+		log.Println("TURNSTILE_SITE_KEY not set, Cloudflare Turnstile is disabled")
+	}
+	TurnstileSecretKey, ok = os.LookupEnv("TURNSTILE_SECRET_KEY")
+	if !ok {
+		TurnstileEnabled = false
+		log.Println("TURNSTILE_SECRET_KEY not set, Cloudflare Turnstile is disabled")
+	}
+	if TurnstileEnabled {
+		log.Println("Cloudflare Turnstile keys have been provided.  Turnstile is enabled")
+	}
+
+	// Temporary overrides for development
+	// Cloudflare Turnstile test key info: https://developers.cloudflare.com/turnstile/troubleshooting/testing/
+	//TurnstileSiteKey = "1x00000000000000000000AA" // Official Turnstile site key for dev usage.  Visible, always passes
+	//TurnstileSiteKey = "2x00000000000000000000AB" // Official Turnstile site key for dev usage.  Visible, always blocks
+	//TurnstileSiteKey = "1x00000000000000000000BB" // Official Turnstile site key for dev usage.  Invisible, always passes
+	//TurnstileSiteKey = "2x00000000000000000000BB" // Official Turnstile site key for dev usage.  Invisible, always blocks
+	//TurnstileSiteKey = "3x00000000000000000000FF" // Official Turnstile site key for dev usage.  Visible, always forces a challenge
+	//TurnstileSecretKey = "1x0000000000000000000000000000000AA" // Official Turnstile secret key for dev usage.  Always passes
+	//TurnstileSecretKey = "2x0000000000000000000000000000000AA" // Official Turnstile secret key for dev usage.  Always fails
+	//TurnstileSecretKey = "3x0000000000000000000000000000000AA" // Official Turnstile secret key for dev usage.  Yields a “token already spent” error
 
 	// Path to the request log
 	requestLog, ok = os.LookupEnv("REQUEST_LOG")

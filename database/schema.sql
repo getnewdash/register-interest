@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 12.6
--- Dumped by pg_dump version 12.6
+-- Dumped from database version 16.4
+-- Dumped by pg_dump version 16.4
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -29,7 +29,8 @@ CREATE TABLE public.potential_customers (
     email text NOT NULL,
     token text NOT NULL,
     token_verified boolean DEFAULT false,
-    registration_date timestamp with time zone DEFAULT now()
+    registration_date timestamp with time zone DEFAULT now(),
+    passed_turnstile_check boolean DEFAULT false NOT NULL
 );
 
 
