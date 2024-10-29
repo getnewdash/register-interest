@@ -14,10 +14,26 @@ import (
 // ConnectPostgreSQL creates a connection to the PostgreSQL server
 func ConnectPostgreSQL() (err error) {
 	// PostgreSQL configuration info
-	os.Setenv("PGHOST", "/var/run/postgresql")
-	os.Setenv("PGDATABASE", "newdash_interest")
-	os.Setenv("PGUSER", "newdash")
-	os.Setenv("PGPASSFILE", "/home/newdash/.pgpass")
+	_, ok := os.LookupEnv("PGHOST")
+	if !ok {
+		os.Setenv("PGHOST", "/var/run/postgresql")
+	}
+	_, ok = os.LookupEnv("PGPORT")
+	if !ok {
+		os.Setenv("PGPORT", "5432")
+	}
+	_, ok = os.LookupEnv("PGDATABASE")
+	if !ok {
+		os.Setenv("PGDATABASE", "newdash_interest")
+	}
+	_, ok = os.LookupEnv("PGUSER")
+	if !ok {
+		os.Setenv("PGUSER", "newdash")
+	}
+	_, ok = os.LookupEnv("PGPASSFILE")
+	if !ok {
+		os.Setenv("PGPASSFILE", "/home/newdash/.pgpass")
+	}
 	pg, err = pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
