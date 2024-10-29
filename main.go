@@ -54,11 +54,11 @@ func main() {
 	// HTTPS Certificate pieces
 	certPath, ok = os.LookupEnv("HTTPS_CERT_PATH")
 	if !ok {
-		log.Println("HTTPS_CERT_PATH not set")
+		log.Println("HTTPS_CERT_PATH not set, https is disabled")
 	}
 	certKey, ok = os.LookupEnv("HTTPS_CERT_KEY")
 	if !ok {
-		log.Println("HTTPS_CERT_KEY not set")
+		log.Println("HTTPS_CERT_KEY not set, https is disabled")
 	}
 	if certPath != "" && certKey != "" {
 		httpsEnabled = true
@@ -168,10 +168,11 @@ func main() {
 	}
 
 	// Start web server
-	log.Printf("WebUI server starting on https://%s:%v", "localhost", port)
 	if httpsEnabled {
+		log.Printf("WebUI server starting on https://%s:%v", "localhost", port)
 		err = srv.ListenAndServeTLS(certPath, certKey)
 	} else {
+		log.Printf("WebUI server starting on http://%s:%v", "localhost", port)
 		err = srv.ListenAndServe()
 	}
 	if err != nil {
